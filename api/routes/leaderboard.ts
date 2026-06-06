@@ -17,6 +17,7 @@ router.get('/team', async (_req, res: Response) => {
     const result = await leaderboardService.getTeamLeaderboard();
     res.json(result);
   } catch (error) {
+    console.error('Team leaderboard error:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

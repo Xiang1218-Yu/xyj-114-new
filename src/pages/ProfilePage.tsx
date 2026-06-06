@@ -248,17 +248,19 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <ShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        data={{
-          username: user!.username,
-          avatar: user!.avatar,
-          totalCheckins: stats!.totalCheckins,
-          streakDays: stats!.streakDays,
-          checkinsThisWeek: stats!.checkinsThisWeek,
-        }}
-      />
+      {user && stats && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          data={{
+            username: user.username,
+            avatar: user.avatar,
+            totalCheckins: stats.totalCheckins,
+            streakDays: stats.streakDays,
+            checkinsThisWeek: stats.checkinsThisWeek,
+          }}
+        />
+      )}
     </div>
   );
 }

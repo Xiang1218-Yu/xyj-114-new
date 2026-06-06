@@ -162,4 +162,30 @@ export const checkinRepository = {
     const result = stmt.run(userId, habitId, checkinDate);
     return result.changes > 0;
   },
+
+  getStreakDays(userId: number): number {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let streak = 0;
+    let currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count FROM checkins
+      WHERE user_id = ? AND checkin_date = ?
+    `);
+
+    while (true) {
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+      const row = stmt.get(userId, dateStr) as { count: number };
+      
+      if (row.count > 0) {
+        streak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  },
 };

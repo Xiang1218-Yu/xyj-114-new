@@ -5,13 +5,19 @@ import { userRepository } from '../repositories/userRepository';
 import { statsRepository } from '../repositories/statsRepository';
 
 const calculateStreak = (userId: number): number => {
-  const stats = statsRepository.getUserStats(userId);
-  return stats.streakDays;
+  return checkinRepository.getStreakDays(userId);
+};
+
+const getLocalDateString = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const isDateValid = (dateStr: string): boolean => {
-  const date = new Date(dateStr);
-  return !isNaN(date.getTime()) && dateStr === date.toISOString().split('T')[0];
+  const date = new Date(dateStr + 'T00:00:00');
+  return !isNaN(date.getTime()) && dateStr === getLocalDateString(date);
 };
 
 export const checkinService = {
@@ -39,7 +45,7 @@ export const checkinService = {
     }
 
     const stats = statsRepository.getUserStats(userId);
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     const streakDays = date === today ? calculateStreak(userId) : stats.streakDays;
     userRepository.updateCheckinStats(userId, stats.totalCheckins, streakDays, date);
 
@@ -121,7 +127,7 @@ export const checkinService = {
     }
 
     const stats = statsRepository.getUserStats(userId);
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     const lastCheckinDate = date === today ? null : date;
     userRepository.updateCheckinStats(userId, stats.totalCheckins, stats.streakDays, lastCheckinDate || today);
 

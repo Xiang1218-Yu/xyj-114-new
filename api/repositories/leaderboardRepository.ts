@@ -20,7 +20,11 @@ export const leaderboardRepository = {
   getTeamLeaderboard(limit = 100): TeamLeaderboardEntry[] {
     return db.prepare(
       `SELECT 
-        ROW_NUMBER() OVER (ORDER BY totalCheckins DESC, memberCount DESC) as rank,
+        ROW_NUMBER() OVER (ORDER BY 
+          COALESCE((SELECT COUNT(*) FROM checkins c 
+                    JOIN team_members tm ON c.user_id = tm.user_id 
+                    WHERE tm.team_id = t.id), 0) DESC, 
+          (SELECT COUNT(*) FROM team_members tm WHERE tm.team_id = t.id) DESC) as rank,
         t.id as teamId,
         t.name,
         (SELECT COUNT(*) FROM team_members tm WHERE tm.team_id = t.id) as memberCount,
@@ -28,7 +32,11 @@ export const leaderboardRepository = {
                   JOIN team_members tm ON c.user_id = tm.user_id 
                   WHERE tm.team_id = t.id), 0) as totalCheckins
        FROM teams t
-       ORDER BY totalCheckins DESC, memberCount DESC
+       ORDER BY 
+         COALESCE((SELECT COUNT(*) FROM checkins c 
+                   JOIN team_members tm ON c.user_id = tm.user_id 
+                   WHERE tm.team_id = t.id), 0) DESC, 
+         (SELECT COUNT(*) FROM team_members tm WHERE tm.team_id = t.id) DESC
        LIMIT ?`
     ).all(limit) as TeamLeaderboardEntry[];
   },

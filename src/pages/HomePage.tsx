@@ -3,7 +3,7 @@ import { Plus, Check, Flame, Loader2, PartyPopper } from 'lucide-react';
 import { getHabits } from '@/api/habits';
 import { checkin } from '@/api/checkins';
 import { useAuthStore } from '@/store/authStore';
-import { cn } from '@/lib/utils';
+import { cn, getLocalDateString } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import CheckinCalendar from '@/components/CheckinCalendar';
@@ -33,7 +33,7 @@ export default function HomePage() {
     return '晚上好';
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
 
   const fetchHabits = useCallback(async () => {
     setLoading(true);

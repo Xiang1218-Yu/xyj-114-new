@@ -1,5 +1,6 @@
 import db from '../utils/db';
 import type { UserStats } from '../../shared/types';
+import { checkinRepository } from './checkinRepository';
 
 interface HabitStat {
   habitId: number;
@@ -69,7 +70,7 @@ export const statsRepository = {
 
     return {
       totalCheckins: userRow?.total_checkins || 0,
-      streakDays: userRow?.streak_days || 0,
+      streakDays: checkinRepository.getStreakDays(userId),
       habitsCount: userRow?.habits_count || 0,
       checkinsThisWeek: weekRow?.count || 0,
       checkinsThisMonth: monthRow?.count || 0,

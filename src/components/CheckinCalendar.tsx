@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getCheckinCalendar } from '@/api/checkins';
-import { cn } from '@/lib/utils';
+import { cn, getLocalDateString } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import type { CheckinCalendarDay } from '@shared/types';
 
@@ -62,8 +62,7 @@ export default function CheckinCalendar() {
       checkinCount: number;
     }> = [];
 
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = getLocalDateString();
 
     for (let i = 0; i < startDayOfWeek; i++) {
       const prevMonthDay = new Date(year, month, -startDayOfWeek + i + 1);
