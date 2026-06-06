@@ -165,7 +165,6 @@ export const checkinRepository = {
 
   getStreakDays(userId: number): number {
     const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     let streak = 0;
     let currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
@@ -185,7 +184,15 @@ export const checkinRepository = {
         break;
       }
     }
-
     return streak;
+  },
+
+  getTotalCheckins(userId: number): number {
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count FROM checkins
+      WHERE user_id = ?
+    `);
+    const row = stmt.get(userId) as { count: number };
+    return row.count || 0;
   },
 };

@@ -2,6 +2,28 @@ import db from '../utils/db';
 import type { UserStats } from '../../shared/types';
 import { checkinRepository } from './checkinRepository';
 
+const getLocalDateString = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getWeekStartDate = (): string => {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - dayOfWeek);
+  return getLocalDateString(weekStart);
+};
+
+const getMonthString = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
 interface HabitStat {
   habitId: number;
   habitName: string;
@@ -24,17 +46,19 @@ export const statsRepository = {
       habits_count: number;
     } | undefined;
 
+    const weekStartDate = getWeekStartDate();
     const weekStmt = db.prepare(`
       SELECT COUNT(*) as count FROM checkins
-      WHERE user_id = ? AND checkin_date >= date('now', 'weekday 0', '-7 days')
+      WHERE user_id = ? AND checkin_date >= ?
     `);
-    const weekRow = weekStmt.get(userId) as { count: number } | undefined;
+    const weekRow = weekStmt.get(userId, weekStartDate) as { count: number } | undefined;
 
+    const monthStr = getMonthString();
     const monthStmt = db.prepare(`
       SELECT COUNT(*) as count FROM checkins
-      WHERE user_id = ? AND strftime('%Y-%m', checkin_date) = strftime('%Y-%m', 'now')
+      WHERE user_id = ? AND strftime('%Y-%m', checkin_date) = ?
     `);
-    const monthRow = monthStmt.get(userId) as { count: number } | undefined;
+    const monthRow = monthStmt.get(userId, monthStr) as { count: number } | undefined;
 
     const habitStatsStmt = db.prepare(`
       SELECT h.id as habit_id, h.name as habit_name, h.icon, h.color, h.frequency, h.target_days,
@@ -69,7 +93,7 @@ export const statsRepository = {
     });
 
     return {
-      totalCheckins: userRow?.total_checkins || 0,
+      totalCheckins: checkinRepository.getTotalCheckins(userId),
       streakDays: checkinRepository.getStreakDays(userId),
       habitsCount: userRow?.habits_count || 0,
       checkinsThisWeek: weekRow?.count || 0,

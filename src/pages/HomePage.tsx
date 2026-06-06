@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Check, Flame, Loader2, PartyPopper } from 'lucide-react';
 import { getHabits } from '@/api/habits';
 import { checkin } from '@/api/checkins';
+import { getUserStats } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
 import { cn, getLocalDateString } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [confetti, setConfetti] = useState<Confetti[]>([]);
   const [successHabitId, setSuccessHabitId] = useState<number | null>(null);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -92,13 +94,15 @@ export default function HomePage() {
         setSuccessHabitId(habit.id);
         setTimeout(() => setSuccessHabitId(null), 600);
 
-        if (user) {
+        const statsRes = await getUserStats();
+        if (statsRes.success && statsRes.data) {
           updateUser({
-            totalCheckins: user.totalCheckins + 1,
-            streakDays: user.streakDays + 1,
+            totalCheckins: statsRes.data.totalCheckins,
+            streakDays: statsRes.data.streakDays,
           });
         }
 
+        setCalendarRefreshKey((prev) => prev + 1);
         triggerConfetti(e.clientX, e.clientY);
       } else {
         setError(response.message || '打卡失败');
@@ -305,7 +309,7 @@ export default function HomePage() {
 
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-4">打卡日历</h2>
-        <CheckinCalendar />
+        <CheckinCalendar key={calendarRefreshKey} />
       </div>
 
       <style>{`

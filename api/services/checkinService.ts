@@ -44,10 +44,10 @@ export const checkinService = {
       return { success: false, message: '打卡失败' };
     }
 
-    const stats = statsRepository.getUserStats(userId);
     const today = getLocalDateString();
-    const streakDays = date === today ? calculateStreak(userId) : stats.streakDays;
-    userRepository.updateCheckinStats(userId, stats.totalCheckins, streakDays, date);
+    const streakDays = date === today ? calculateStreak(userId) : 0;
+    const totalCheckins = checkinRepository.getTotalCheckins(userId);
+    userRepository.updateCheckinStats(userId, totalCheckins, streakDays, date);
 
     return {
       success: true,
