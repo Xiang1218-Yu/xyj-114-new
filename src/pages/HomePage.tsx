@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Check, Flame, Loader2, PartyPopper, Bell } from 'lucide-react';
-import { getHabits } from '@/api/habits';
 import { checkin } from '@/api/checkins';
 import { getUserStats } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
@@ -24,6 +23,7 @@ export default function HomePage() {
   const {
     habits,
     setHabits,
+    refreshHabits,
     requestNotificationPermission,
     notificationEnabled,
   } = useReminderContext();
@@ -50,21 +50,20 @@ export default function HomePage() {
   const today = getLocalDateString();
 
   const fetchHabits = useCallback(async () => {
+    if (habits.length > 0) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const response = await getHabits();
-      if (response.success && response.data) {
-        setHabits(response.data);
-      } else {
-        setError(response.message || '获取习惯列表失败');
-      }
+      await refreshHabits();
     } catch {
       setError('网络错误，请稍后重试');
     } finally {
       setLoading(false);
     }
-  }, [setHabits]);
+  }, [habits.length, refreshHabits]);
 
   useEffect(() => {
     fetchHabits();
@@ -341,7 +340,7 @@ export default function HomePage() {
         <h2 className="text-xl font-bold text-gray-900 mb-4">打卡日历</h2>
         <CheckinCalendar
           key={calendarRefreshKey}
-          onCheckinChange={fetchHabits}
+          onCheckinChange={refreshHabits}
         />
       </div>
 

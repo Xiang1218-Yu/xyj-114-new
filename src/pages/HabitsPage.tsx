@@ -3,7 +3,8 @@ import { Plus, Edit2, Trash2, X, Check, Calendar, TrendingUp } from 'lucide-reac
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { getHabits, createHabit, updateHabit, deleteHabit } from '@/api/habits';
+import { createHabit, updateHabit, deleteHabit } from '@/api/habits';
+import { useReminderContext } from '@/context/ReminderContext';
 import type { Habit, CreateHabitRequest } from '@shared/types';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +22,7 @@ const defaultFormData: CreateHabitRequest = {
 };
 
 export default function HabitsPage() {
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const { habits, setHabits, refreshHabits } = useReminderContext();
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -34,23 +35,23 @@ export default function HabitsPage() {
     type: 'success',
   });
 
-  const fetchHabits = async () => {
-    try {
-      setLoading(true);
-      const response = await getHabits();
-      if (response.success && response.data) {
-        setHabits(response.data);
-      }
-    } catch (error) {
-      showToast('获取习惯列表失败', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchHabits();
-  }, []);
+    const loadHabits = async () => {
+      if (habits.length > 0) {
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        await refreshHabits();
+      } catch {
+        showToast('获取习惯列表失败', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadHabits();
+  }, [habits.length, refreshHabits]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
@@ -94,17 +95,17 @@ export default function HabitsPage() {
         if (response.success) {
           showToast('习惯更新成功', 'success');
           setModalOpen(false);
-          fetchHabits();
+          await refreshHabits();
         }
       } else {
         const response = await createHabit(formData);
         if (response.success) {
           showToast('习惯创建成功', 'success');
           setModalOpen(false);
-          fetchHabits();
+          await refreshHabits();
         }
       }
-    } catch (error) {
+    } catch {
       showToast(editingHabit ? '更新失败' : '创建失败', 'error');
     }
   };
@@ -118,9 +119,9 @@ export default function HabitsPage() {
         showToast('习惯删除成功', 'success');
         setDeleteModalOpen(false);
         setDeletingHabit(null);
-        fetchHabits();
+        await refreshHabits();
       }
-    } catch (error) {
+    } catch {
       showToast('删除失败', 'error');
     }
   };

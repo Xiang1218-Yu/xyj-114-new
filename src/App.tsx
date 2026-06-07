@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import Layout from '@/components/Layout';
 import HomePage from '@/pages/HomePage';
@@ -11,11 +11,7 @@ import LeaderboardPage from '@/pages/LeaderboardPage';
 import ProfilePage from '@/pages/ProfilePage';
 import { ReminderProvider } from '@/context/ReminderContext';
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-function ProtectedRoute({ children }: ProtectedRouteProps) {
+function ProtectedRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const token = localStorage.getItem('token');
   
@@ -23,10 +19,16 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
   
-  return <>{children}</>;
+  return (
+    <ReminderProvider>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </ReminderProvider>
+  );
 }
 
-function PublicRoute({ children }: ProtectedRouteProps) {
+function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const token = localStorage.getItem('token');
   
@@ -58,78 +60,14 @@ export default function App() {
           }
         />
         
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <ReminderProvider>
-                <Layout>
-                  <HomePage />
-                </Layout>
-              </ReminderProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/habits"
-          element={
-            <ProtectedRoute>
-              <ReminderProvider>
-                <Layout>
-                  <HabitsPage />
-                </Layout>
-              </ReminderProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/teams"
-          element={
-            <ProtectedRoute>
-              <ReminderProvider>
-                <Layout>
-                  <TeamsPage />
-                </Layout>
-              </ReminderProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/teams/:id"
-          element={
-            <ProtectedRoute>
-              <ReminderProvider>
-                <Layout>
-                  <TeamDetailPage />
-                </Layout>
-              </ReminderProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/leaderboard"
-          element={
-            <ProtectedRoute>
-              <ReminderProvider>
-                <Layout>
-                  <LeaderboardPage />
-                </Layout>
-              </ReminderProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ReminderProvider>
-                <Layout>
-                  <ProfilePage />
-                </Layout>
-              </ReminderProvider>
-            </ProtectedRoute>
-          }
-        />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/habits" element={<HabitsPage />} />
+          <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/teams/:id" element={<TeamDetailPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

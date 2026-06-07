@@ -148,6 +148,10 @@ export function ReminderProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    refreshHabits();
+  }, [refreshHabits]);
+
+  useEffect(() => {
     if (habits.length === 0) {
       return;
     }
