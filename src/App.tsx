@@ -9,6 +9,7 @@ import TeamsPage from '@/pages/TeamsPage';
 import TeamDetailPage from '@/pages/TeamDetailPage';
 import LeaderboardPage from '@/pages/LeaderboardPage';
 import ProfilePage from '@/pages/ProfilePage';
+import { ReminderProvider } from '@/context/ReminderContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -61,9 +62,11 @@ export default function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Layout>
-                <HomePage />
-              </Layout>
+              <ReminderProvider>
+                <Layout>
+                  <HomePage />
+                </Layout>
+              </ReminderProvider>
             </ProtectedRoute>
           }
         />
@@ -71,9 +74,11 @@ export default function App() {
           path="/habits"
           element={
             <ProtectedRoute>
-              <Layout>
-                <HabitsPage />
-              </Layout>
+              <ReminderProvider>
+                <Layout>
+                  <HabitsPage />
+                </Layout>
+              </ReminderProvider>
             </ProtectedRoute>
           }
         />
@@ -81,9 +86,11 @@ export default function App() {
           path="/teams"
           element={
             <ProtectedRoute>
-              <Layout>
-                <TeamsPage />
-              </Layout>
+              <ReminderProvider>
+                <Layout>
+                  <TeamsPage />
+                </Layout>
+              </ReminderProvider>
             </ProtectedRoute>
           }
         />
@@ -91,9 +98,11 @@ export default function App() {
           path="/teams/:id"
           element={
             <ProtectedRoute>
-              <Layout>
-                <TeamDetailPage />
-              </Layout>
+              <ReminderProvider>
+                <Layout>
+                  <TeamDetailPage />
+                </Layout>
+              </ReminderProvider>
             </ProtectedRoute>
           }
         />
@@ -101,9 +110,11 @@ export default function App() {
           path="/leaderboard"
           element={
             <ProtectedRoute>
-              <Layout>
-                <LeaderboardPage />
-              </Layout>
+              <ReminderProvider>
+                <Layout>
+                  <LeaderboardPage />
+                </Layout>
+              </ReminderProvider>
             </ProtectedRoute>
           }
         />
@@ -111,9 +122,11 @@ export default function App() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <Layout>
-                <ProfilePage />
-              </Layout>
+              <ReminderProvider>
+                <Layout>
+                  <ProfilePage />
+                </Layout>
+              </ReminderProvider>
             </ProtectedRoute>
           }
         />

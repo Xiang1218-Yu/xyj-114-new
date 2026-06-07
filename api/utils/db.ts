@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS habits (
   color VARCHAR(20) DEFAULT '#FF6B6B',
   frequency VARCHAR(10) DEFAULT 'daily',
   target_days INTEGER DEFAULT 7,
+  reminder_time VARCHAR(5),
+  reminder_enabled INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -72,5 +74,20 @@ CREATE INDEX IF NOT EXISTS idx_teams_invite_code ON teams(invite_code);
 `;
 
 db.exec(initTables);
+
+const migrate = () => {
+  try {
+    db.prepare('ALTER TABLE habits ADD COLUMN reminder_time VARCHAR(5)').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+  try {
+    db.prepare('ALTER TABLE habits ADD COLUMN reminder_enabled INTEGER DEFAULT 0').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+};
+
+migrate();
 
 export default db;

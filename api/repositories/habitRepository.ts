@@ -10,6 +10,8 @@ function mapHabit(row: any): Habit {
     color: row.color,
     frequency: row.frequency,
     targetDays: row.target_days,
+    reminderTime: row.reminder_time || undefined,
+    reminderEnabled: Boolean(row.reminder_enabled),
     createdAt: row.created_at,
     isCheckedToday: row.is_checked_today ? Boolean(row.is_checked_today) : undefined,
   };
@@ -22,12 +24,14 @@ export const habitRepository = {
     icon: string,
     color: string,
     frequency: string,
-    targetDays: number
+    targetDays: number,
+    reminderTime?: string,
+    reminderEnabled: boolean = false
   ) {
     const stmt = db.prepare(
-      'INSERT INTO habits (user_id, name, icon, color, frequency, target_days) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO habits (user_id, name, icon, color, frequency, target_days, reminder_time, reminder_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(userId, name, icon, color, frequency, targetDays);
+    const result = stmt.run(userId, name, icon, color, frequency, targetDays, reminderTime || null, reminderEnabled ? 1 : 0);
     return result.lastInsertRowid as number;
   },
 
@@ -50,12 +54,14 @@ export const habitRepository = {
     icon: string,
     color: string,
     frequency: string,
-    targetDays: number
+    targetDays: number,
+    reminderTime?: string,
+    reminderEnabled: boolean = false
   ) {
     const stmt = db.prepare(
-      'UPDATE habits SET name = ?, icon = ?, color = ?, frequency = ?, target_days = ? WHERE id = ? AND user_id = ?'
+      'UPDATE habits SET name = ?, icon = ?, color = ?, frequency = ?, target_days = ?, reminder_time = ?, reminder_enabled = ? WHERE id = ? AND user_id = ?'
     );
-    const result = stmt.run(name, icon, color, frequency, targetDays, id, userId);
+    const result = stmt.run(name, icon, color, frequency, targetDays, reminderTime || null, reminderEnabled ? 1 : 0, id, userId);
     return result.changes > 0;
   },
 

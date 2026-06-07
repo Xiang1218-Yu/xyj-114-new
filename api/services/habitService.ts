@@ -19,13 +19,23 @@ export const habitService = {
       return { success: false, message: '目标天数必须在1-7之间' };
     }
 
+    if (habitData.reminderEnabled && !habitData.reminderTime) {
+      return { success: false, message: '开启提醒后必须设置提醒时间' };
+    }
+
+    if (habitData.reminderTime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(habitData.reminderTime)) {
+      return { success: false, message: '提醒时间格式不正确，应为 HH:MM 格式' };
+    }
+
     const habitId = habitRepository.createHabit(
       userId,
       habitData.name,
       habitData.icon,
       habitData.color,
       habitData.frequency,
-      habitData.targetDays
+      habitData.targetDays,
+      habitData.reminderTime,
+      habitData.reminderEnabled
     );
 
     const habit = habitRepository.getHabitById(habitId, userId);
@@ -69,13 +79,24 @@ export const habitService = {
       return { success: false, message: '目标天数必须在1-7之间' };
     }
 
+    const reminderEnabled = habitData.reminderEnabled ?? existingHabit.reminderEnabled;
+    const reminderTime = habitData.reminderTime ?? existingHabit.reminderTime;
+
+    if (reminderEnabled && !reminderTime) {
+      return { success: false, message: '开启提醒后必须设置提醒时间' };
+    }
+
+    if (reminderTime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(reminderTime)) {
+      return { success: false, message: '提醒时间格式不正确，应为 HH:MM 格式' };
+    }
+
     const name = habitData.name ?? existingHabit.name;
     const icon = habitData.icon ?? existingHabit.icon;
     const color = habitData.color ?? existingHabit.color;
     const frequency = habitData.frequency ?? existingHabit.frequency;
     const targetDays = habitData.targetDays ?? existingHabit.targetDays;
 
-    const updated = habitRepository.updateHabit(habitId, userId, name, icon, color, frequency, targetDays);
+    const updated = habitRepository.updateHabit(habitId, userId, name, icon, color, frequency, targetDays, reminderTime, reminderEnabled);
     if (!updated) {
       return { success: false, message: '更新失败' };
     }

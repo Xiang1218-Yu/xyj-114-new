@@ -16,6 +16,8 @@ const defaultFormData: CreateHabitRequest = {
   color: '#FF6B6B',
   frequency: 'daily',
   targetDays: 21,
+  reminderEnabled: false,
+  reminderTime: '08:00',
 };
 
 export default function HabitsPage() {
@@ -69,6 +71,8 @@ export default function HabitsPage() {
       color: habit.color,
       frequency: habit.frequency,
       targetDays: habit.targetDays,
+      reminderEnabled: habit.reminderEnabled,
+      reminderTime: habit.reminderTime || '08:00',
     });
     setModalOpen(true);
   };
@@ -211,6 +215,11 @@ export default function HabitsPage() {
                         <div>
                           <h3 className="font-bold text-lg text-gray-800">{habit.name}</h3>
                           <p className="text-sm text-gray-500">{formatDate(habit.createdAt)}</p>
+                          {habit.reminderEnabled && habit.reminderTime && (
+                            <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
+                              🔔 每日 {habit.reminderTime} 提醒
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div
@@ -385,6 +394,42 @@ export default function HabitsPage() {
                     setFormData({ ...formData, targetDays: parseInt(e.target.value) || 1 })
                   }
                 />
+
+                <div>
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">开启提醒</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, reminderEnabled: !formData.reminderEnabled })}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                        formData.reminderEnabled ? 'bg-orange-500' : 'bg-gray-200'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                          formData.reminderEnabled ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    </button>
+                  </label>
+                </div>
+
+                {formData.reminderEnabled && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">提醒时间</label>
+                    <input
+                      type="time"
+                      value={formData.reminderTime}
+                      onChange={(e) => setFormData({ ...formData, reminderTime: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 系统将在设定时间发送浏览器通知，提醒你完成习惯打卡
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-2">
                   <Button onClick={handleSubmit} className="w-full">

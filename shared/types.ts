@@ -16,6 +16,8 @@ export interface Habit {
   color: string;
   frequency: 'daily' | 'weekly';
   targetDays: number;
+  reminderTime?: string;
+  reminderEnabled: boolean;
   createdAt: string;
   isCheckedToday?: boolean;
 }
@@ -98,6 +100,8 @@ export interface CreateHabitRequest {
   color: string;
   frequency: 'daily' | 'weekly';
   targetDays: number;
+  reminderTime?: string;
+  reminderEnabled: boolean;
 }
 
 export interface CreateTeamRequest {

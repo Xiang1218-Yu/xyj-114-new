@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Check, Flame, Loader2, PartyPopper } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Check, Flame, Loader2, PartyPopper, Bell } from 'lucide-react';
 import { getHabits } from '@/api/habits';
 import { checkin } from '@/api/checkins';
 import { getUserStats } from '@/api/users';
@@ -8,6 +8,7 @@ import { cn, getLocalDateString } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import CheckinCalendar from '@/components/CheckinCalendar';
+import { useReminderContext } from '@/context/ReminderContext';
 import type { Habit } from '@shared/types';
 
 interface Confetti {
@@ -20,13 +21,24 @@ interface Confetti {
 
 export default function HomePage() {
   const { user, updateUser } = useAuthStore();
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const {
+    habits,
+    setHabits,
+    requestNotificationPermission,
+    notificationEnabled,
+  } = useReminderContext();
+
   const [loading, setLoading] = useState(false);
   const [checkingInId, setCheckingInId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confetti, setConfetti] = useState<Confetti[]>([]);
   const [successHabitId, setSuccessHabitId] = useState<number | null>(null);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
+  const notificationCheckRef = useRef<HTMLButtonElement>(null);
+
+  const handleEnableNotification = async () => {
+    await requestNotificationPermission();
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -52,7 +64,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setHabits]);
 
   useEffect(() => {
     fetchHabits();
@@ -147,10 +159,23 @@ export default function HomePage() {
             今天是坚持的第 {user?.streakDays || 0} 天，继续加油！
           </p>
         </div>
-        <Button className="gap-2">
-          <Plus className="w-5 h-5" />
-          添加习惯
-        </Button>
+        <div className="flex gap-2">
+          {!notificationEnabled && (
+            <Button
+              ref={notificationCheckRef}
+              variant="outline"
+              onClick={handleEnableNotification}
+              className="gap-2"
+            >
+              <Bell className="w-5 h-5" />
+              开启通知
+            </Button>
+          )}
+          <Button className="gap-2">
+            <Plus className="w-5 h-5" />
+            添加习惯
+          </Button>
+        </div>
       </div>
 
       <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 overflow-hidden relative">
@@ -279,6 +304,11 @@ export default function HomePage() {
                         {habit.frequency === 'daily' ? '每日' : '每周'}{' '}
                         {habit.targetDays} 天
                       </p>
+                      {habit.reminderEnabled && habit.reminderTime && !habit.isCheckedToday && (
+                        <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
+                          🔔 {habit.reminderTime} 提醒
+                        </p>
+                      )}
                     </div>
                     <Button
                       size="lg"
