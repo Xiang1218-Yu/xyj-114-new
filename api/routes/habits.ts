@@ -15,9 +15,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    console.log('Creating habit with data:', JSON.stringify(req.body));
     const result = await habitService.createHabit(req.userId!, req.body);
+    console.log('Create habit result:', JSON.stringify(result));
     res.json(result);
   } catch (error) {
+    console.error('Error creating habit:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

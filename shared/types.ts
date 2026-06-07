@@ -101,7 +101,7 @@ export interface CreateHabitRequest {
   frequency: 'daily' | 'weekly';
   targetDays: number;
   reminderTime?: string;
-  reminderEnabled: boolean;
+  reminderEnabled?: boolean;
 }
 
 export interface CreateTeamRequest {

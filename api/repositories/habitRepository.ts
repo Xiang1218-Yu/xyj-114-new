@@ -28,10 +28,12 @@ export const habitRepository = {
     reminderTime?: string,
     reminderEnabled: boolean = false
   ) {
+    const enabled = Boolean(reminderEnabled);
+    const time = enabled ? reminderTime : null;
     const stmt = db.prepare(
       'INSERT INTO habits (user_id, name, icon, color, frequency, target_days, reminder_time, reminder_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(userId, name, icon, color, frequency, targetDays, reminderTime || null, reminderEnabled ? 1 : 0);
+    const result = stmt.run(userId, name, icon, color, frequency, targetDays, time, enabled ? 1 : 0);
     return result.lastInsertRowid as number;
   },
 
@@ -58,10 +60,12 @@ export const habitRepository = {
     reminderTime?: string,
     reminderEnabled: boolean = false
   ) {
+    const enabled = Boolean(reminderEnabled);
+    const time = enabled ? reminderTime : null;
     const stmt = db.prepare(
       'UPDATE habits SET name = ?, icon = ?, color = ?, frequency = ?, target_days = ?, reminder_time = ?, reminder_enabled = ? WHERE id = ? AND user_id = ?'
     );
-    const result = stmt.run(name, icon, color, frequency, targetDays, reminderTime || null, reminderEnabled ? 1 : 0, id, userId);
+    const result = stmt.run(name, icon, color, frequency, targetDays, time, enabled ? 1 : 0, id, userId);
     return result.changes > 0;
   },
 

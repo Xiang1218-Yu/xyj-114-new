@@ -27,6 +27,9 @@ export const habitService = {
       return { success: false, message: '提醒时间格式不正确，应为 HH:MM 格式' };
     }
 
+    const reminderEnabled = habitData.reminderEnabled ?? false;
+    const reminderTime = reminderEnabled ? habitData.reminderTime : undefined;
+
     const habitId = habitRepository.createHabit(
       userId,
       habitData.name,
@@ -34,8 +37,8 @@ export const habitService = {
       habitData.color,
       habitData.frequency,
       habitData.targetDays,
-      habitData.reminderTime,
-      habitData.reminderEnabled
+      reminderTime,
+      reminderEnabled
     );
 
     const habit = habitRepository.getHabitById(habitId, userId);
