@@ -28,6 +28,12 @@ export interface Checkin {
   createdAt: string;
 }
 
+export interface CheckinWithHabit extends Checkin {
+  habitName: string;
+  habitIcon: string;
+  habitColor: string;
+}
+
 export interface Team {
   id: number;
   name: string;

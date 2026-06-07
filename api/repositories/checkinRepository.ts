@@ -1,5 +1,5 @@
 import db from '../utils/db';
-import type { Checkin, CheckinCalendarDay } from '../../shared/types';
+import type { Checkin, CheckinCalendarDay, CheckinWithHabit } from '../../shared/types';
 
 function mapCheckin(row: any): Checkin {
   return {
@@ -8,6 +8,19 @@ function mapCheckin(row: any): Checkin {
     habitId: row.habit_id,
     checkinDate: row.checkin_date,
     createdAt: row.created_at,
+  };
+}
+
+function mapCheckinWithHabit(row: any): CheckinWithHabit {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    habitId: row.habit_id,
+    checkinDate: row.checkin_date,
+    createdAt: row.created_at,
+    habitName: row.habit_name,
+    habitIcon: row.habit_icon,
+    habitColor: row.habit_color,
   };
 }
 
@@ -49,6 +62,18 @@ export const checkinRepository = {
     `);
     const rows = stmt.all(userId, date);
     return rows.map((row: any) => mapCheckin(row));
+  },
+
+  getCheckinsByDateWithHabit(userId: number, date: string): CheckinWithHabit[] {
+    const stmt = db.prepare(`
+      SELECT c.*, h.name as habit_name, h.icon as habit_icon, h.color as habit_color
+      FROM checkins c
+      JOIN habits h ON c.habit_id = h.id
+      WHERE c.user_id = ? AND c.checkin_date = ?
+      ORDER BY c.created_at DESC
+    `);
+    const rows = stmt.all(userId, date);
+    return rows.map((row: any) => mapCheckinWithHabit(row));
   },
 
   findByUserAndDateRange(userId: number, startDate: string, endDate: string) {

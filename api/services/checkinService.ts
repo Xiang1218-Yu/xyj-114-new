@@ -1,4 +1,4 @@
-import type { ApiResponse, Checkin, CheckinCalendarDay } from '../../shared/types';
+import type { ApiResponse, Checkin, CheckinCalendarDay, CheckinWithHabit } from '../../shared/types';
 import { checkinRepository } from '../repositories/checkinRepository';
 import { habitRepository } from '../repositories/habitRepository';
 import { userRepository } from '../repositories/userRepository';
@@ -56,12 +56,12 @@ export const checkinService = {
     };
   },
 
-  getCheckinsByDate(userId: number, date: string): ApiResponse<Checkin[]> {
+  getCheckinsByDate(userId: number, date: string): ApiResponse<CheckinWithHabit[]> {
     if (!isDateValid(date)) {
       return { success: false, message: '日期格式无效' };
     }
 
-    const checkins = checkinRepository.getCheckinsByDate(userId, date);
+    const checkins = checkinRepository.getCheckinsByDateWithHabit(userId, date);
 
     return {
       success: true,

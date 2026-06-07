@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { getCheckinCalendar } from '@/api/checkins';
+import { ChevronLeft, ChevronRight, Loader2, X, Check, Trash2 } from 'lucide-react';
+import { getCheckinCalendar, getCheckinsByDate, undoCheckin } from '@/api/checkins';
 import { cn, getLocalDateString } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
-import type { CheckinCalendarDay } from '@shared/types';
+import Modal from '@/components/Modal';
+import type { CheckinCalendarDay, CheckinWithHabit } from '@shared/types';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -24,8 +25,29 @@ export default function CheckinCalendar() {
   const [error, setError] = useState<string | null>(null);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDateCheckins, setSelectedDateCheckins] = useState<CheckinWithHabit[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [undoingId, setUndoingId] = useState<number | null>(null);
+
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success',
+  });
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
 
   const fetchCalendarData = useCallback(async () => {
     setLoading(true);
@@ -47,6 +69,58 @@ export default function CheckinCalendar() {
   useEffect(() => {
     fetchCalendarData();
   }, [fetchCalendarData]);
+
+  const fetchDateDetail = useCallback(async (date: string) => {
+    setDetailLoading(true);
+    try {
+      const response = await getCheckinsByDate(date);
+      if (response.success && response.data) {
+        setSelectedDateCheckins(response.data);
+      } else {
+        showToast(response.message || '获取详情失败', 'error');
+      }
+    } catch {
+      showToast('网络错误，请稍后重试', 'error');
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const handleDateClick = (date: string, checkinCount: number) => {
+    setSelectedDate(date);
+    setDetailModalOpen(true);
+    if (checkinCount > 0) {
+      fetchDateDetail(date);
+    } else {
+      setSelectedDateCheckins([]);
+    }
+  };
+
+  const handleUndoCheckin = async (habitId: number, habitName: string) => {
+    if (!selectedDate) return;
+
+    setUndoingId(habitId);
+    try {
+      const response = await undoCheckin(habitId, selectedDate);
+      if (response.success) {
+        showToast(`已取消 "${habitName}" 的打卡`, 'success');
+        await fetchDateDetail(selectedDate);
+        await fetchCalendarData();
+      } else {
+        showToast(response.message || '取消打卡失败', 'error');
+      }
+    } catch {
+      showToast('网络错误，请稍后重试', 'error');
+    } finally {
+      setUndoingId(null);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setDetailModalOpen(false);
+    setSelectedDate(null);
+    setSelectedDateCheckins([]);
+  };
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1);
@@ -127,6 +201,24 @@ export default function CheckinCalendar() {
     return colors;
   };
 
+  const formatDateDisplay = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+    });
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
 
   if (error) {
@@ -195,6 +287,9 @@ export default function CheckinCalendar() {
                 onMouseLeave={() => setHoveredDate(null)}
               >
                 <div
+                  onClick={() =>
+                    day.isCurrentMonth && handleDateClick(day.date, day.checkinCount)
+                  }
                   className={cn(
                     'aspect-square flex flex-col items-center justify-center rounded-xl transition-all duration-200 relative',
                     day.isCurrentMonth
@@ -208,7 +303,7 @@ export default function CheckinCalendar() {
                       'bg-orange-50',
                     day.isCurrentMonth &&
                       !day.isToday &&
-                      'hover:bg-gray-100 cursor-pointer'
+                      'hover:bg-gray-100 cursor-pointer active:scale-95'
                   )}
                 >
                   <span className="text-sm">{day.day}</span>
@@ -226,7 +321,7 @@ export default function CheckinCalendar() {
 
                 {hoveredDate === day.date && day.checkinCount > 0 && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-10 bg-gray-900 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                    打卡 {day.checkinCount} 次
+                    打卡 {day.checkinCount} 次 · 点击查看详情
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
                   </div>
                 )}
@@ -234,6 +329,103 @@ export default function CheckinCalendar() {
             ))}
           </div>
         </>
+      )}
+
+      <Modal isOpen={detailModalOpen} onClose={closeDetailModal}>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">
+                {selectedDate && formatDateDisplay(selectedDate)}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {selectedDateCheckins.length > 0
+                  ? `已打卡 ${selectedDateCheckins.length} 个习惯`
+                  : '当天没有打卡记录'}
+              </p>
+            </div>
+            <button
+              onClick={closeDetailModal}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              <X size={18} className="text-gray-500" />
+            </button>
+          </div>
+
+          {detailLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            </div>
+          ) : selectedDateCheckins.length > 0 ? (
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+              {selectedDateCheckins.map((checkin) => (
+                <div
+                  key={checkin.id}
+                  className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                    style={{ backgroundColor: `${checkin.habitColor}20` }}
+                  >
+                    {checkin.habitIcon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 truncate">
+                      {checkin.habitName}
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      {formatTime(checkin.createdAt)} 打卡
+                    </p>
+                  </div>
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: checkin.habitColor }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      handleUndoCheckin(checkin.habitId, checkin.habitName)
+                    }
+                    disabled={undoingId === checkin.habitId}
+                    className="text-red-500 hover:bg-red-50 hover:text-red-600 flex-shrink-0"
+                  >
+                    {undoingId === checkin.habitId ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-5xl mb-4">📅</div>
+              <p className="text-gray-500">当天没有打卡记录</p>
+            </div>
+          )}
+
+          {selectedDateCheckins.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <p className="text-xs text-gray-400 text-center">
+                提示：点击右侧删除按钮可以取消当天的打卡记录
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {toast.show && (
+        <div
+          className={cn(
+            'fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-bottom duration-300',
+            toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          )}
+        >
+          {toast.type === 'success' ? <Check size={18} /> : <X size={18} />}
+          {toast.message}
+        </div>
       )}
     </div>
   );
