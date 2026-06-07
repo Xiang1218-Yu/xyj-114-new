@@ -309,7 +309,10 @@ export default function HomePage() {
 
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-4">打卡日历</h2>
-        <CheckinCalendar key={calendarRefreshKey} />
+        <CheckinCalendar
+          key={calendarRefreshKey}
+          onCheckinChange={fetchHabits}
+        />
       </div>
 
       <style>{`

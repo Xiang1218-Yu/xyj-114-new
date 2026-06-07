@@ -1,10 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, X, Check, Trash2 } from 'lucide-react';
 import { getCheckinCalendar, getCheckinsByDate, undoCheckin } from '@/api/checkins';
+import { getHabits } from '@/api/habits';
+import { getUserStats } from '@/api/users';
+import { useAuthStore } from '@/store/authStore';
 import { cn, getLocalDateString } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { Card, CardContent } from '@/components/ui/Card';
 import Modal from '@/components/Modal';
-import type { CheckinCalendarDay, CheckinWithHabit } from '@shared/types';
+import type { CheckinCalendarDay, CheckinWithHabit, Habit } from '@shared/types';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -18,7 +22,12 @@ const DOT_COLORS = [
   'bg-yellow-500',
 ];
 
-export default function CheckinCalendar() {
+interface CheckinCalendarProps {
+  onCheckinChange?: () => void;
+}
+
+export default function CheckinCalendar({ onCheckinChange }: CheckinCalendarProps) {
+  const { updateUser } = useAuthStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState<CheckinCalendarDay[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +39,9 @@ export default function CheckinCalendar() {
   const [selectedDateCheckins, setSelectedDateCheckins] = useState<CheckinWithHabit[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [undoingId, setUndoingId] = useState<number | null>(null);
+
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [pendingUndo, setPendingUndo] = useState<{ habitId: number; habitName: string } | null>(null);
 
   const [toast, setToast] = useState<{
     show: boolean;
@@ -96,16 +108,45 @@ export default function CheckinCalendar() {
     }
   };
 
-  const handleUndoCheckin = async (habitId: number, habitName: string) => {
-    if (!selectedDate) return;
-
-    setUndoingId(habitId);
+  const refreshAllData = useCallback(async () => {
+    await fetchCalendarData();
+    if (selectedDate) {
+      await fetchDateDetail(selectedDate);
+    }
     try {
-      const response = await undoCheckin(habitId, selectedDate);
+      const statsRes = await getUserStats();
+      if (statsRes.success && statsRes.data) {
+        updateUser({
+          totalCheckins: statsRes.data.totalCheckins,
+          streakDays: statsRes.data.streakDays,
+        });
+      }
+    } catch {
+      // 忽略统计数据刷新错误
+    }
+    onCheckinChange?.();
+  }, [selectedDate, fetchCalendarData, fetchDateDetail, updateUser, onCheckinChange]);
+
+  const openConfirmModal = (habitId: number, habitName: string) => {
+    setPendingUndo({ habitId, habitName });
+    setConfirmModalOpen(true);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModalOpen(false);
+    setPendingUndo(null);
+  };
+
+  const confirmUndoCheckin = async () => {
+    if (!selectedDate || !pendingUndo) return;
+
+    setUndoingId(pendingUndo.habitId);
+    try {
+      const response = await undoCheckin(pendingUndo.habitId, selectedDate);
       if (response.success) {
-        showToast(`已取消 "${habitName}" 的打卡`, 'success');
-        await fetchDateDetail(selectedDate);
-        await fetchCalendarData();
+        showToast(`已取消 "${pendingUndo.habitName}" 的打卡`, 'success');
+        await refreshAllData();
+        closeConfirmModal();
       } else {
         showToast(response.message || '取消打卡失败', 'error');
       }
@@ -333,23 +374,15 @@ export default function CheckinCalendar() {
 
       <Modal isOpen={detailModalOpen} onClose={closeDetailModal}>
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">
-                {selectedDate && formatDateDisplay(selectedDate)}
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {selectedDateCheckins.length > 0
-                  ? `已打卡 ${selectedDateCheckins.length} 个习惯`
-                  : '当天没有打卡记录'}
-              </p>
-            </div>
-            <button
-              onClick={closeDetailModal}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-            >
-              <X size={18} className="text-gray-500" />
-            </button>
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-900">
+              {selectedDate && formatDateDisplay(selectedDate)}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {selectedDateCheckins.length > 0
+                ? `已打卡 ${selectedDateCheckins.length} 个习惯`
+                : '当天没有打卡记录'}
+            </p>
           </div>
 
           {detailLoading ? (
@@ -385,7 +418,7 @@ export default function CheckinCalendar() {
                     variant="ghost"
                     size="sm"
                     onClick={() =>
-                      handleUndoCheckin(checkin.habitId, checkin.habitName)
+                      openConfirmModal(checkin.habitId, checkin.habitName)
                     }
                     disabled={undoingId === checkin.habitId}
                     className="text-red-500 hover:bg-red-50 hover:text-red-600 flex-shrink-0"
@@ -413,6 +446,45 @@ export default function CheckinCalendar() {
               </p>
             </div>
           )}
+        </div>
+      </Modal>
+
+      <Modal isOpen={confirmModalOpen} onClose={closeConfirmModal}>
+        <div className="p-6">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+              <Trash2 size={32} className="text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">确认取消打卡</h3>
+            <p className="text-gray-500 mb-6">
+              确定要取消习惯 "{pendingUndo?.habitName}" 的打卡记录吗？此操作不可撤销。
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={closeConfirmModal}
+                className="flex-1"
+                disabled={undoingId !== null}
+              >
+                取消
+              </Button>
+              <Button
+                variant="danger"
+                onClick={confirmUndoCheckin}
+                className="flex-1"
+                disabled={undoingId !== null}
+              >
+                {undoingId !== null ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    取消中...
+                  </span>
+                ) : (
+                  '确认取消'
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </Modal>
 
