@@ -6,8 +6,19 @@ const router = Router();
 
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { habitId, date } = req.body;
-    const result = await checkinService.checkin(req.userId!, habitId, date);
+    const { habitId, date, mood, notes } = req.body;
+    const result = await checkinService.checkin(req.userId!, habitId, date, mood, notes);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: '服务器错误' });
+  }
+});
+
+router.put('/:id/diary', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const checkinId = parseInt(req.params.id);
+    const { mood, notes } = req.body;
+    const result = await checkinService.updateDiary(req.userId!, checkinId, mood, notes);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: '服务器错误' });

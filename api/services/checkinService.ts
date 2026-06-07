@@ -3,6 +3,7 @@ import { checkinRepository } from '../repositories/checkinRepository';
 import { habitRepository } from '../repositories/habitRepository';
 import { userRepository } from '../repositories/userRepository';
 import { statsRepository } from '../repositories/statsRepository';
+import db from '../utils/db';
 
 const calculateStreak = (userId: number): number => {
   return checkinRepository.getStreakDays(userId);
@@ -21,7 +22,7 @@ const isDateValid = (dateStr: string): boolean => {
 };
 
 export const checkinService = {
-  checkin(userId: number, habitId: number, date: string): ApiResponse<Checkin> {
+  checkin(userId: number, habitId: number, date: string, mood?: string, notes?: string): ApiResponse<Checkin> {
     if (!isDateValid(date)) {
       return { success: false, message: '日期格式无效' };
     }
@@ -36,7 +37,7 @@ export const checkinService = {
       return { success: false, message: '今日已打卡' };
     }
 
-    const checkinId = checkinRepository.createCheckin(userId, habitId, date);
+    const checkinId = checkinRepository.createCheckin(userId, habitId, date, mood, notes);
     const checkins = checkinRepository.getCheckinsByDate(userId, date);
     const checkin = checkins.find(c => c.id === checkinId);
 
@@ -53,6 +54,41 @@ export const checkinService = {
       success: true,
       data: checkin,
       message: '打卡成功',
+    };
+  },
+
+  updateDiary(userId: number, checkinId: number, mood?: string, notes?: string): ApiResponse<Checkin> {
+    const stmt = db.prepare('SELECT * FROM checkins WHERE id = ? AND user_id = ?');
+    const row = stmt.get(checkinId, userId);
+    
+    if (!row) {
+      return { success: false, message: '打卡记录不存在' };
+    }
+
+    const updated = checkinRepository.updateCheckinDiary(checkinId, userId, mood, notes);
+    if (!updated) {
+      return { success: false, message: '更新日记失败' };
+    }
+
+    const checkins = checkinRepository.getCheckinsByDate(userId, row.checkin_date);
+    const checkin = checkins.find(c => c.id === checkinId);
+
+    if (!checkin) {
+      const updatedRow = stmt.get(checkinId, userId);
+      if (updatedRow) {
+        return {
+          success: true,
+          data: checkinRepository.mapToCheckin(updatedRow),
+          message: '日记更新成功',
+        };
+      }
+      return { success: false, message: '更新日记失败' };
+    }
+
+    return {
+      success: true,
+      data: checkin,
+      message: '日记更新成功',
     };
   },
 

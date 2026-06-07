@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS checkins (
   user_id INTEGER NOT NULL,
   habit_id INTEGER NOT NULL,
   checkin_date DATE NOT NULL,
+  mood VARCHAR(10),
+  notes TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
@@ -83,6 +85,16 @@ const migrate = () => {
   }
   try {
     db.prepare('ALTER TABLE habits ADD COLUMN reminder_enabled INTEGER DEFAULT 0').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+  try {
+    db.prepare('ALTER TABLE checkins ADD COLUMN mood VARCHAR(10)').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+  try {
+    db.prepare('ALTER TABLE checkins ADD COLUMN notes TEXT').run();
   } catch {
     // Column may already exist, ignore
   }

@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Check, Flame, Loader2, PartyPopper, Bell } from 'lucide-react';
-import { checkin } from '@/api/checkins';
+import { checkin, updateCheckinDiary } from '@/api/checkins';
 import { getUserStats } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
 import { cn, getLocalDateString } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import CheckinCalendar from '@/components/CheckinCalendar';
+import DiaryModal from '@/components/DiaryModal';
 import { useReminderContext } from '@/context/ReminderContext';
-import type { Habit } from '@shared/types';
+import type { Habit, Checkin } from '@shared/types';
 
 interface Confetti {
   id: number;
@@ -35,6 +36,13 @@ export default function HomePage() {
   const [successHabitId, setSuccessHabitId] = useState<number | null>(null);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const notificationCheckRef = useRef<HTMLButtonElement>(null);
+
+  const [diaryModalOpen, setDiaryModalOpen] = useState(false);
+  const [pendingCheckin, setPendingCheckin] = useState<{
+    habit: Habit;
+    checkin: Checkin;
+  } | null>(null);
+  const [savingDiary, setSavingDiary] = useState(false);
 
   const handleEnableNotification = async () => {
     await requestNotificationPermission();
@@ -115,6 +123,9 @@ export default function HomePage() {
 
         setCalendarRefreshKey((prev) => prev + 1);
         triggerConfetti(e.clientX, e.clientY);
+
+        setPendingCheckin({ habit, checkin: response.data });
+        setDiaryModalOpen(true);
       } else {
         setError(response.message || '打卡失败');
       }
@@ -123,6 +134,34 @@ export default function HomePage() {
     } finally {
       setCheckingInId(null);
     }
+  };
+
+  const handleSaveDiary = async (mood: string, notes: string) => {
+    if (!pendingCheckin) return;
+
+    setSavingDiary(true);
+    try {
+      const response = await updateCheckinDiary(pendingCheckin.checkin.id, {
+        mood: mood || undefined,
+        notes: notes || undefined,
+      });
+      if (response.success) {
+        setCalendarRefreshKey((prev) => prev + 1);
+        setDiaryModalOpen(false);
+        setPendingCheckin(null);
+      } else {
+        setError(response.message || '保存日记失败');
+      }
+    } catch {
+      setError('网络错误，请稍后重试');
+    } finally {
+      setSavingDiary(false);
+    }
+  };
+
+  const handleCloseDiaryModal = () => {
+    setDiaryModalOpen(false);
+    setPendingCheckin(null);
   };
 
   const completedToday = habits.filter((h) => h.isCheckedToday).length;
@@ -361,6 +400,14 @@ export default function HomePage() {
           }
         }
       `}</style>
+
+      <DiaryModal
+        isOpen={diaryModalOpen}
+        onClose={handleCloseDiaryModal}
+        onSave={handleSaveDiary}
+        habit={pendingCheckin?.habit}
+        isLoading={savingDiary}
+      />
     </div>
   );
 }

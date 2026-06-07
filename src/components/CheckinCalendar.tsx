@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, X, Check, Trash2 } from 'lucide-react';
-import { getCheckinCalendar, getCheckinsByDate, undoCheckin } from '@/api/checkins';
+import { ChevronLeft, ChevronRight, Loader2, X, Check, Trash2, Edit3 } from 'lucide-react';
+import { getCheckinCalendar, getCheckinsByDate, undoCheckin, updateCheckinDiary } from '@/api/checkins';
 import { getHabits } from '@/api/habits';
 import { getUserStats } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
@@ -8,7 +8,8 @@ import { cn, getLocalDateString } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import Modal from '@/components/Modal';
-import type { CheckinCalendarDay, CheckinWithHabit, Habit } from '@shared/types';
+import DiaryModal from '@/components/DiaryModal';
+import type { CheckinCalendarDay, CheckinWithHabit, Habit, Checkin } from '@shared/types';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -42,6 +43,10 @@ export default function CheckinCalendar({ onCheckinChange }: CheckinCalendarProp
 
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [pendingUndo, setPendingUndo] = useState<{ habitId: number; habitName: string } | null>(null);
+
+  const [editDiaryModalOpen, setEditDiaryModalOpen] = useState(false);
+  const [editingCheckin, setEditingCheckin] = useState<CheckinWithHabit | null>(null);
+  const [savingDiary, setSavingDiary] = useState(false);
 
   const [toast, setToast] = useState<{
     show: boolean;
@@ -161,6 +166,39 @@ export default function CheckinCalendar({ onCheckinChange }: CheckinCalendarProp
     setDetailModalOpen(false);
     setSelectedDate(null);
     setSelectedDateCheckins([]);
+  };
+
+  const openEditDiaryModal = (checkin: CheckinWithHabit) => {
+    setEditingCheckin(checkin);
+    setEditDiaryModalOpen(true);
+  };
+
+  const closeEditDiaryModal = () => {
+    setEditDiaryModalOpen(false);
+    setEditingCheckin(null);
+  };
+
+  const handleSaveDiary = async (mood: string, notes: string) => {
+    if (!editingCheckin) return;
+
+    setSavingDiary(true);
+    try {
+      const response = await updateCheckinDiary(editingCheckin.id, {
+        mood: mood || undefined,
+        notes: notes || undefined,
+      });
+      if (response.success) {
+        showToast('日记更新成功', 'success');
+        await refreshAllData();
+        closeEditDiaryModal();
+      } else {
+        showToast(response.message || '保存日记失败', 'error');
+      }
+    } catch {
+      showToast('网络错误，请稍后重试', 'error');
+    } finally {
+      setSavingDiary(false);
+    }
   };
 
   const calendarDays = useMemo(() => {
@@ -390,45 +428,73 @@ export default function CheckinCalendar({ onCheckinChange }: CheckinCalendarProp
               <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
             </div>
           ) : selectedDateCheckins.length > 0 ? (
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2">
               {selectedDateCheckins.map((checkin) => (
                 <div
                   key={checkin.id}
-                  className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                 >
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ backgroundColor: `${checkin.habitColor}20` }}
-                  >
-                    {checkin.habitIcon}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                      style={{ backgroundColor: `${checkin.habitColor}20` }}
+                    >
+                      {checkin.habitIcon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-gray-900 truncate">
+                          {checkin.habitName}
+                        </h4>
+                        {checkin.mood && (
+                          <span className="text-xl" title="心情">
+                            {checkin.mood}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {formatTime(checkin.createdAt)} 打卡
+                      </p>
+                    </div>
+                    <div
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: checkin.habitColor }}
+                    />
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDiaryModal(checkin)}
+                        className="text-orange-500 hover:bg-orange-50 hover:text-orange-600 p-2"
+                      >
+                        <Edit3 size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          openConfirmModal(checkin.habitId, checkin.habitName)
+                        }
+                        disabled={undoingId === checkin.habitId}
+                        className="text-red-500 hover:bg-red-50 hover:text-red-600 p-2"
+                      >
+                        {undoingId === checkin.habitId ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 truncate">
-                      {checkin.habitName}
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      {formatTime(checkin.createdAt)} 打卡
-                    </p>
-                  </div>
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: checkin.habitColor }}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      openConfirmModal(checkin.habitId, checkin.habitName)
-                    }
-                    disabled={undoingId === checkin.habitId}
-                    className="text-red-500 hover:bg-red-50 hover:text-red-600 flex-shrink-0"
-                  >
-                    {undoingId === checkin.habitId ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={16} />
-                    )}
-                  </Button>
+                  {checkin.notes && (
+                    <div className="mt-3 pl-16 pr-4">
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {checkin.notes}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -499,6 +565,15 @@ export default function CheckinCalendar({ onCheckinChange }: CheckinCalendarProp
           {toast.message}
         </div>
       )}
+
+      <DiaryModal
+        isOpen={editDiaryModalOpen}
+        onClose={closeEditDiaryModal}
+        onSave={handleSaveDiary}
+        initialMood={editingCheckin?.mood || ''}
+        initialNotes={editingCheckin?.notes || ''}
+        isLoading={savingDiary}
+      />
     </div>
   );
 }

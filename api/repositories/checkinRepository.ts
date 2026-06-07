@@ -7,6 +7,8 @@ function mapCheckin(row: any): Checkin {
     userId: row.user_id,
     habitId: row.habit_id,
     checkinDate: row.checkin_date,
+    mood: row.mood,
+    notes: row.notes,
     createdAt: row.created_at,
   };
 }
@@ -17,6 +19,8 @@ function mapCheckinWithHabit(row: any): CheckinWithHabit {
     userId: row.user_id,
     habitId: row.habit_id,
     checkinDate: row.checkin_date,
+    mood: row.mood,
+    notes: row.notes,
     createdAt: row.created_at,
     habitName: row.habit_name,
     habitIcon: row.habit_icon,
@@ -29,20 +33,28 @@ export const checkinRepository = {
     return mapCheckin(row);
   },
 
-  create(userId: number, habitId: number, date: string) {
+  create(userId: number, habitId: number, date: string, mood?: string, notes?: string) {
     const stmt = db.prepare(
-      'INSERT INTO checkins (user_id, habit_id, checkin_date) VALUES (?, ?, ?)'
+      'INSERT INTO checkins (user_id, habit_id, checkin_date, mood, notes) VALUES (?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(userId, habitId, date);
+    const result = stmt.run(userId, habitId, date, mood || null, notes || null);
     return result.lastInsertRowid as number;
   },
 
-  createCheckin(userId: number, habitId: number, checkinDate: string) {
+  createCheckin(userId: number, habitId: number, checkinDate: string, mood?: string, notes?: string) {
     const stmt = db.prepare(
-      'INSERT INTO checkins (user_id, habit_id, checkin_date) VALUES (?, ?, ?)'
+      'INSERT INTO checkins (user_id, habit_id, checkin_date, mood, notes) VALUES (?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(userId, habitId, checkinDate);
+    const result = stmt.run(userId, habitId, checkinDate, mood || null, notes || null);
     return result.lastInsertRowid as number;
+  },
+
+  updateCheckinDiary(checkinId: number, userId: number, mood?: string, notes?: string) {
+    const stmt = db.prepare(
+      'UPDATE checkins SET mood = ?, notes = ? WHERE id = ? AND user_id = ?'
+    );
+    const result = stmt.run(mood || null, notes || null, checkinId, userId);
+    return result.changes > 0;
   },
 
   findByUserAndDate(userId: number, date: string) {

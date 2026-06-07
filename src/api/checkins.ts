@@ -4,10 +4,24 @@ import type {
   CheckinWithHabit,
   CheckinCalendarDay,
   ApiResponse,
+  CreateCheckinRequest,
+  UpdateCheckinDiaryRequest,
 } from '@shared/types';
 
-export const checkin = (habitId: number, date: string): Promise<ApiResponse<Checkin>> => {
-  return request<Checkin>('post', '/checkins', { habitId, date });
+export const checkin = (
+  habitId: number,
+  date: string,
+  mood?: string,
+  notes?: string
+): Promise<ApiResponse<Checkin>> => {
+  return request<Checkin>('post', '/checkins', { habitId, date, mood, notes });
+};
+
+export const updateCheckinDiary = (
+  checkinId: number,
+  data: UpdateCheckinDiaryRequest
+): Promise<ApiResponse<Checkin>> => {
+  return request<Checkin>('put', `/checkins/${checkinId}/diary`, data);
 };
 
 export const undoCheckin = (habitId: number, date: string): Promise<ApiResponse<void>> => {

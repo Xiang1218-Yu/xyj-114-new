@@ -27,6 +27,8 @@ export interface Checkin {
   userId: number;
   habitId: number;
   checkinDate: string;
+  mood?: string;
+  notes?: string;
   createdAt: string;
 }
 
@@ -34,6 +36,18 @@ export interface CheckinWithHabit extends Checkin {
   habitName: string;
   habitIcon: string;
   habitColor: string;
+}
+
+export interface CreateCheckinRequest {
+  habitId: number;
+  date: string;
+  mood?: string;
+  notes?: string;
+}
+
+export interface UpdateCheckinDiaryRequest {
+  mood?: string;
+  notes?: string;
 }
 
 export interface Team {
