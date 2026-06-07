@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Check, Calendar, TrendingUp } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Calendar, TrendingUp, Target, Flame, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 const PRESET_ICONS = ['🏃', '📚', '💪', '🧘', '💧', '🌙', '✍️', '🎯', '🍎', '😴'];
 const PRESET_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+const CATEGORIES = ['健康', '学习', '工作', '生活', '运动', '阅读', '其他'];
 
 const defaultFormData: CreateHabitRequest = {
   name: '',
@@ -19,10 +20,13 @@ const defaultFormData: CreateHabitRequest = {
   targetDays: 21,
   reminderEnabled: false,
   reminderTime: '08:00',
+  shortTermGoal: '',
+  longTermGoal: '',
+  category: '',
 };
 
 export default function HabitsPage() {
-  const { habits, setHabits, refreshHabits } = useReminderContext();
+  const { habits, refreshHabits } = useReminderContext();
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -74,6 +78,9 @@ export default function HabitsPage() {
       targetDays: habit.targetDays,
       reminderEnabled: habit.reminderEnabled,
       reminderTime: habit.reminderTime || '08:00',
+      shortTermGoal: habit.shortTermGoal || '',
+      longTermGoal: habit.longTermGoal || '',
+      category: habit.category || '',
     });
     setModalOpen(true);
   };
@@ -126,16 +133,17 @@ export default function HabitsPage() {
     }
   };
 
-  const calculateStats = (habit: Habit) => {
+  const getStats = (habit: Habit) => {
     const createdDate = new Date(habit.createdAt);
     const now = new Date();
     const daysSinceCreation = Math.max(
       1,
       Math.ceil((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24))
     );
-    const totalCheckins = Math.min(daysSinceCreation, Math.floor(Math.random() * daysSinceCreation) + 1);
-    const completionRate = Math.round((totalCheckins / daysSinceCreation) * 100);
-    return { totalCheckins, completionRate };
+    const completionRate = habit.completionRate ?? 0;
+    const totalCheckins = Math.round((completionRate / 100) * daysSinceCreation);
+    const currentStreak = habit.currentStreak ?? 0;
+    return { totalCheckins, completionRate, currentStreak, daysSinceCreation };
   };
 
   const formatDate = (dateString: string) => {
@@ -196,7 +204,7 @@ export default function HabitsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {habits.map((habit, index) => {
-              const stats = calculateStats(habit);
+              const stats = getStats(habit);
               return (
                 <Card
                   key={habit.id}
@@ -214,7 +222,18 @@ export default function HabitsPage() {
                           {habit.icon}
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-gray-800">{habit.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-lg text-gray-800">{habit.name}</h3>
+                            {habit.category && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
+                                style={{ backgroundColor: `${habit.color}20`, color: habit.color }}
+                              >
+                                <Tag size={10} />
+                                {habit.category}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">{formatDate(habit.createdAt)}</p>
                           {habit.reminderEnabled && habit.reminderTime && (
                             <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
@@ -230,25 +249,58 @@ export default function HabitsPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-gray-50 rounded-xl p-3">
-                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                          <Calendar size={14} />
+                    {(habit.shortTermGoal || habit.longTermGoal) && (
+                      <div className="mb-4 space-y-2">
+                        {habit.shortTermGoal && (
+                          <div className="bg-orange-50 rounded-lg p-2">
+                            <p className="text-xs text-orange-600 font-medium flex items-center gap-1">
+                              <Target size={12} />
+                              短期目标
+                            </p>
+                            <p className="text-sm text-gray-700 mt-0.5">{habit.shortTermGoal}</p>
+                          </div>
+                        )}
+                        {habit.longTermGoal && (
+                          <div className="bg-blue-50 rounded-lg p-2">
+                            <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                              <Target size={12} />
+                              长期目标
+                            </p>
+                            <p className="text-sm text-gray-700 mt-0.5">{habit.longTermGoal}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="bg-gray-50 rounded-xl p-2 text-center">
+                        <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                          <Calendar size={12} />
                           总打卡
                         </div>
-                        <div className="text-2xl font-bold text-gray-800">
+                        <div className="text-xl font-bold text-gray-800">
                           {stats.totalCheckins}
-                          <span className="text-sm font-normal text-gray-500 ml-1">天</span>
+                          <span className="text-xs font-normal text-gray-500 ml-0.5">天</span>
                         </div>
                       </div>
-                      <div className="bg-gray-50 rounded-xl p-3">
-                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                          <TrendingUp size={14} />
+                      <div className="bg-gray-50 rounded-xl p-2 text-center">
+                        <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                          <Flame size={12} />
+                          连续
+                        </div>
+                        <div className="text-xl font-bold" style={{ color: habit.color }}>
+                          {stats.currentStreak}
+                          <span className="text-xs font-normal text-gray-500 ml-0.5">天</span>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-2 text-center">
+                        <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                          <TrendingUp size={12} />
                           完成率
                         </div>
-                        <div className="text-2xl font-bold" style={{ color: habit.color }}>
+                        <div className="text-xl font-bold" style={{ color: habit.color }}>
                           {stats.completionRate}
-                          <span className="text-sm font-normal text-gray-500 ml-1">%</span>
+                          <span className="text-xs font-normal text-gray-500 ml-0.5">%</span>
                         </div>
                       </div>
                     </div>
@@ -390,11 +442,65 @@ export default function HabitsPage() {
                   label="目标天数"
                   type="number"
                   min="1"
+                  max="365"
                   value={formData.targetDays}
                   onChange={(e) =>
                     setFormData({ ...formData, targetDays: parseInt(e.target.value) || 1 })
                   }
                 />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">分类标签</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() =>
+                          setFormData({ ...formData, category: formData.category === cat ? '' : cat })
+                        }
+                        className={cn(
+                          'py-2 px-3 rounded-xl text-sm font-medium transition-all',
+                          formData.category === cat
+                            ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        )}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">短期目标</label>
+                  <textarea
+                    value={formData.shortTermGoal}
+                    onChange={(e) => setFormData({ ...formData, shortTermGoal: e.target.value })}
+                    placeholder="例如：连续打卡7天"
+                    maxLength={255}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                    rows={2}
+                  />
+                  <p className="text-xs text-gray-400 mt-1 text-right">
+                    {formData.shortTermGoal?.length || 0}/255
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">长期目标</label>
+                  <textarea
+                    value={formData.longTermGoal}
+                    onChange={(e) => setFormData({ ...formData, longTermGoal: e.target.value })}
+                    placeholder="例如：坚持跑步100天，减重5公斤"
+                    maxLength={255}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                    rows={2}
+                  />
+                  <p className="text-xs text-gray-400 mt-1 text-right">
+                    {formData.longTermGoal?.length || 0}/255
+                  </p>
+                </div>
 
                 <div>
                   <label className="flex items-center justify-between">

@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS habits (
   target_days INTEGER DEFAULT 7,
   reminder_time VARCHAR(5),
   reminder_enabled INTEGER DEFAULT 0,
+  short_term_goal VARCHAR(255),
+  long_term_goal VARCHAR(255),
+  category VARCHAR(50),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -95,6 +98,21 @@ const migrate = () => {
   }
   try {
     db.prepare('ALTER TABLE checkins ADD COLUMN notes TEXT').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+  try {
+    db.prepare('ALTER TABLE habits ADD COLUMN short_term_goal VARCHAR(255)').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+  try {
+    db.prepare('ALTER TABLE habits ADD COLUMN long_term_goal VARCHAR(255)').run();
+  } catch {
+    // Column may already exist, ignore
+  }
+  try {
+    db.prepare('ALTER TABLE habits ADD COLUMN category VARCHAR(50)').run();
   } catch {
     // Column may already exist, ignore
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Check, Flame, Loader2, PartyPopper, Bell } from 'lucide-react';
+import { Plus, Check, Flame, Loader2, PartyPopper, Bell, Tag, TrendingUp } from 'lucide-react';
 import { checkin, updateCheckinDiary } from '@/api/checkins';
 import { getUserStats } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
@@ -23,7 +23,6 @@ export default function HomePage() {
   const { user, updateUser } = useAuthStore();
   const {
     habits,
-    setHabits,
     refreshHabits,
     requestNotificationPermission,
     notificationEnabled,
@@ -104,11 +103,7 @@ export default function HomePage() {
     try {
       const response = await checkin(habit.id, today);
       if (response.success && response.data) {
-        setHabits((prev) =>
-          prev.map((h) =>
-            h.id === habit.id ? { ...h, isCheckedToday: true } : h
-          )
-        );
+        await refreshHabits();
 
         setSuccessHabitId(habit.id);
         setTimeout(() => setSuccessHabitId(null), 600);
@@ -124,8 +119,11 @@ export default function HomePage() {
         setCalendarRefreshKey((prev) => prev + 1);
         triggerConfetti(e.clientX, e.clientY);
 
-        setPendingCheckin({ habit, checkin: response.data });
-        setDiaryModalOpen(true);
+        const updatedHabit = habits.find((h) => h.id === habit.id);
+        if (updatedHabit) {
+          setPendingCheckin({ habit: updatedHabit, checkin: response.data });
+          setDiaryModalOpen(true);
+        }
       } else {
         setError(response.message || '打卡失败');
       }
@@ -320,28 +318,55 @@ export default function HomePage() {
                 )}
               >
                 <CardContent className="p-5">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-start gap-4">
                     <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg transition-transform duration-300"
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg transition-transform duration-300 shrink-0"
                       style={{ backgroundColor: habit.color + '20' }}
                     >
                       <span style={{ color: habit.color }}>{habit.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className={cn(
-                          'font-bold text-lg truncate',
-                          habit.isCheckedToday
-                            ? 'text-green-700 line-through'
-                            : 'text-gray-900'
-                        )}
-                      >
-                        {habit.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {habit.frequency === 'daily' ? '每日' : '每周'}{' '}
-                        {habit.targetDays} 天
-                      </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className={cn(
+                                'font-bold text-lg truncate',
+                                habit.isCheckedToday
+                                  ? 'text-green-700 line-through'
+                                  : 'text-gray-900'
+                              )}
+                            >
+                              {habit.name}
+                            </h3>
+                            {habit.category && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0"
+                                style={{ backgroundColor: `${habit.color}20`, color: habit.color }}
+                              >
+                                <Tag size={10} />
+                                {habit.category}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {habit.frequency === 'daily' ? '每日' : '每周'}{' '}
+                            {habit.targetDays} 天
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <Flame size={12} style={{ color: habit.color }} />
+                          <span>连续 {habit.currentStreak ?? 0} 天</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <TrendingUp size={12} style={{ color: habit.color }} />
+                          <span>完成率 {habit.completionRate ?? 0}%</span>
+                        </div>
+                      </div>
+
                       {habit.reminderEnabled && habit.reminderTime && !habit.isCheckedToday && (
                         <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
                           🔔 {habit.reminderTime} 提醒
@@ -354,7 +379,7 @@ export default function HomePage() {
                       disabled={habit.isCheckedToday || checkingInId === habit.id}
                       onClick={(e) => handleCheckin(habit, e)}
                       className={cn(
-                        'w-14 h-14 p-0 rounded-2xl transition-all duration-300',
+                        'w-14 h-14 p-0 rounded-2xl transition-all duration-300 shrink-0',
                         successHabitId === habit.id && 'animate-bounce',
                         habit.isCheckedToday && 'bg-green-500 text-white hover:bg-green-600 border-green-500'
                       )}

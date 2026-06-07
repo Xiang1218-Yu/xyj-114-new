@@ -5,6 +5,8 @@ const getTodayDate = (): string => {
   return new Date().toISOString().split('T')[0];
 };
 
+const VALID_CATEGORIES = ['健康', '学习', '工作', '生活', '运动', '阅读', '其他'];
+
 export const habitService = {
   createHabit(userId: number, habitData: CreateHabitRequest): ApiResponse<Habit> {
     if (!habitData.name || habitData.name.trim() === '') {
@@ -15,8 +17,8 @@ export const habitService = {
       return { success: false, message: '频率只能是 daily 或 weekly' };
     }
 
-    if (habitData.targetDays < 1 || habitData.targetDays > 7) {
-      return { success: false, message: '目标天数必须在1-7之间' };
+    if (habitData.targetDays < 1 || habitData.targetDays > 365) {
+      return { success: false, message: '目标天数必须在1-365之间' };
     }
 
     if (habitData.reminderEnabled && !habitData.reminderTime) {
@@ -25,6 +27,18 @@ export const habitService = {
 
     if (habitData.reminderTime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(habitData.reminderTime)) {
       return { success: false, message: '提醒时间格式不正确，应为 HH:MM 格式' };
+    }
+
+    if (habitData.shortTermGoal && habitData.shortTermGoal.length > 255) {
+      return { success: false, message: '短期目标不能超过255个字符' };
+    }
+
+    if (habitData.longTermGoal && habitData.longTermGoal.length > 255) {
+      return { success: false, message: '长期目标不能超过255个字符' };
+    }
+
+    if (habitData.category && !VALID_CATEGORIES.includes(habitData.category)) {
+      return { success: false, message: `分类必须是以下之一：${VALID_CATEGORIES.join('、')}` };
     }
 
     const reminderEnabled = habitData.reminderEnabled ?? false;
@@ -38,7 +52,10 @@ export const habitService = {
       habitData.frequency,
       habitData.targetDays,
       reminderTime,
-      reminderEnabled
+      reminderEnabled,
+      habitData.shortTermGoal,
+      habitData.longTermGoal,
+      habitData.category
     );
 
     const habit = habitRepository.getHabitById(habitId, userId);
@@ -47,16 +64,22 @@ export const habitService = {
       return { success: false, message: '创建习惯失败' };
     }
 
+    const stats = habitRepository.getHabitStats(habitId, userId);
+
     return {
       success: true,
-      data: habit,
+      data: {
+        ...habit,
+        currentStreak: stats.currentStreak,
+        completionRate: stats.completionRate,
+      },
       message: '习惯创建成功',
     };
   },
 
   getHabits(userId: number): ApiResponse<Habit[]> {
     const today = getTodayDate();
-    const habits = habitRepository.getHabitsWithCheckinStatus(userId, today);
+    const habits = habitRepository.getHabitsWithStats(userId, today);
 
     return {
       success: true,
@@ -78,8 +101,20 @@ export const habitService = {
       return { success: false, message: '频率只能是 daily 或 weekly' };
     }
 
-    if (habitData.targetDays !== undefined && (habitData.targetDays < 1 || habitData.targetDays > 7)) {
-      return { success: false, message: '目标天数必须在1-7之间' };
+    if (habitData.targetDays !== undefined && (habitData.targetDays < 1 || habitData.targetDays > 365)) {
+      return { success: false, message: '目标天数必须在1-365之间' };
+    }
+
+    if (habitData.shortTermGoal && habitData.shortTermGoal.length > 255) {
+      return { success: false, message: '短期目标不能超过255个字符' };
+    }
+
+    if (habitData.longTermGoal && habitData.longTermGoal.length > 255) {
+      return { success: false, message: '长期目标不能超过255个字符' };
+    }
+
+    if (habitData.category && !VALID_CATEGORIES.includes(habitData.category)) {
+      return { success: false, message: `分类必须是以下之一：${VALID_CATEGORIES.join('、')}` };
     }
 
     const reminderEnabled = habitData.reminderEnabled ?? existingHabit.reminderEnabled;
@@ -98,14 +133,30 @@ export const habitService = {
     const color = habitData.color ?? existingHabit.color;
     const frequency = habitData.frequency ?? existingHabit.frequency;
     const targetDays = habitData.targetDays ?? existingHabit.targetDays;
+    const shortTermGoal = habitData.shortTermGoal !== undefined ? habitData.shortTermGoal : existingHabit.shortTermGoal;
+    const longTermGoal = habitData.longTermGoal !== undefined ? habitData.longTermGoal : existingHabit.longTermGoal;
+    const category = habitData.category !== undefined ? habitData.category : existingHabit.category;
 
-    const updated = habitRepository.updateHabit(habitId, userId, name, icon, color, frequency, targetDays, reminderTime, reminderEnabled);
+    const updated = habitRepository.updateHabit(
+      habitId,
+      userId,
+      name,
+      icon,
+      color,
+      frequency,
+      targetDays,
+      reminderTime,
+      reminderEnabled,
+      shortTermGoal,
+      longTermGoal,
+      category
+    );
     if (!updated) {
       return { success: false, message: '更新失败' };
     }
 
     const today = getTodayDate();
-    const habits = habitRepository.getHabitsWithCheckinStatus(userId, today);
+    const habits = habitRepository.getHabitsWithStats(userId, today);
     const habit = habits.find(h => h.id === habitId);
 
     if (!habit) {

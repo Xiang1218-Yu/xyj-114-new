@@ -18,8 +18,13 @@ export interface Habit {
   targetDays: number;
   reminderTime?: string;
   reminderEnabled: boolean;
+  shortTermGoal?: string;
+  longTermGoal?: string;
+  category?: string;
   createdAt: string;
   isCheckedToday?: boolean;
+  currentStreak?: number;
+  completionRate?: number;
 }
 
 export interface Checkin {
@@ -116,6 +121,9 @@ export interface CreateHabitRequest {
   targetDays: number;
   reminderTime?: string;
   reminderEnabled?: boolean;
+  shortTermGoal?: string;
+  longTermGoal?: string;
+  category?: string;
 }
 
 export interface CreateTeamRequest {

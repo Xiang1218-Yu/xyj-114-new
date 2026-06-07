@@ -59,7 +59,7 @@ export const checkinService = {
 
   updateDiary(userId: number, checkinId: number, mood?: string, notes?: string): ApiResponse<Checkin> {
     const stmt = db.prepare('SELECT * FROM checkins WHERE id = ? AND user_id = ?');
-    const row = stmt.get(checkinId, userId);
+    const row = stmt.get(checkinId, userId) as { checkin_date: string } | undefined;
     
     if (!row) {
       return { success: false, message: '打卡记录不存在' };
