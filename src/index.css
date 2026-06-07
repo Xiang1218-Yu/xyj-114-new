@@ -11,7 +11,10 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
+.shadow-sm {
+  max-height: 700px;
+  overflow-y: auto;
+}
 @layer base {
   body {
     @apply bg-gray-50 text-gray-800 min-h-screen;
