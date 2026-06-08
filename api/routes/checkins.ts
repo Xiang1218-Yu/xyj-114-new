@@ -4,7 +4,7 @@ import { asyncAuthHandler } from '../middleware/asyncHandler.js';
 import { checkinService } from '../services/checkinService.js';
 import { successResponse } from '../utils/response.js';
 import { validate, validateParams, schemas } from '../utils/validation.js';
-import { BadRequestError } from '../utils/errors.js';
+import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors.js';
 import type { CreateCheckinRequest, UpdateCheckinDiaryRequest } from '../../shared/types.js';
 
 const router = Router();
@@ -18,7 +18,16 @@ router.post(
       schemas.checkin
     );
     const result = await checkinService.checkin(req.userId!, habitId, date, mood, notes);
-    successResponse(res, result, '签到成功', 201);
+    if (!result.success) {
+      if (result.message === '习惯不存在') {
+        throw new NotFoundError(result.message);
+      }
+      if (result.message === '今日已打卡') {
+        throw new ConflictError(result.message);
+      }
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '签到成功', 201);
   })
 );
 
@@ -29,7 +38,13 @@ router.put(
     const [checkinId] = validateParams(req.params, ['id']);
     const { mood, notes } = validate<UpdateCheckinDiaryRequest>(req.body, schemas.updateDiary);
     const result = await checkinService.updateDiary(req.userId!, checkinId, mood, notes);
-    successResponse(res, result, '更新日记成功');
+    if (!result.success) {
+      if (result.message === '打卡记录不存在') {
+        throw new NotFoundError(result.message);
+      }
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '更新日记成功');
   })
 );
 
@@ -39,7 +54,13 @@ router.delete(
   asyncAuthHandler(async (req: AuthRequest, res) => {
     const { habitId, date } = validate(req.body, schemas.undoCheckin);
     const result = await checkinService.undoCheckin(req.userId!, habitId as number, date as string);
-    successResponse(res, result, '取消签到成功');
+    if (!result.success) {
+      if (result.message === '该日期没有打卡记录') {
+        throw new NotFoundError(result.message);
+      }
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '取消签到成功');
   })
 );
 
@@ -52,7 +73,10 @@ router.get(
       throw new BadRequestError('日期参数不能为空');
     }
     const result = await checkinService.getCheckinsByDate(req.userId!, date);
-    successResponse(res, result, '获取签到记录成功');
+    if (!result.success) {
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '获取签到记录成功');
   })
 );
 
@@ -69,7 +93,10 @@ router.get(
       startDate as string,
       endDate as string
     );
-    successResponse(res, result, '获取签到历史成功');
+    if (!result.success) {
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '获取签到历史成功');
   })
 );
 
@@ -79,7 +106,10 @@ router.get(
   asyncAuthHandler(async (req: AuthRequest, res) => {
     const [year, month] = validateParams(req.params, ['year', 'month']);
     const result = await checkinService.getCheckinCalendar(req.userId!, year, month);
-    successResponse(res, result, '获取签到日历成功');
+    if (!result.success) {
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '获取签到日历成功');
   })
 );
 

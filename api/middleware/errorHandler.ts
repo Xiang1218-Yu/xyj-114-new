@@ -8,13 +8,15 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  if (error instanceof ValidationError) {
-    errorResponse(res, error.message, error.statusCode, error.errors);
+  const err = error as AppError & { errors?: Record<string, string> };
+
+  if ('errors' in err && err.errors !== undefined) {
+    errorResponse(res, err.message, err.statusCode || 400, err.errors);
     return;
   }
 
-  if (error instanceof AppError) {
-    errorResponse(res, error.message, error.statusCode);
+  if (err instanceof AppError || err.statusCode !== undefined) {
+    errorResponse(res, err.message, err.statusCode || 500);
     return;
   }
 

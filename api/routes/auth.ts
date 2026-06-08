@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
 import { asyncHandler, asyncAuthHandler } from '../middleware/asyncHandler.js';
 import { authService } from '../services/authService.js';
-import { successResponse } from '../utils/response.js';
+import { successResponse, errorResponse } from '../utils/response.js';
 import { validate, schemas } from '../utils/validation.js';
+import { ConflictError, UnauthorizedError, NotFoundError, BadRequestError } from '../utils/errors.js';
 import type { LoginRequest, RegisterRequest } from '../../shared/types.js';
 
 const router = Router();
@@ -16,7 +17,13 @@ router.post(
       schemas.register
     );
     const result = await authService.register(username, email, password, confirmPassword);
-    successResponse(res, result, '注册成功', 201);
+    if (!result.success) {
+      if (result.message === '用户名已存在' || result.message === '邮箱已被注册') {
+        throw new ConflictError(result.message);
+      }
+      throw new BadRequestError(result.message);
+    }
+    successResponse(res, result.data, '注册成功', 201);
   })
 );
 
@@ -25,7 +32,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const { username, password } = validate<LoginRequest>(req.body, schemas.login);
     const result = await authService.login(username, password);
-    successResponse(res, result, '登录成功');
+    if (!result.success) {
+      throw new UnauthorizedError(result.message);
+    }
+    successResponse(res, result.data, '登录成功');
   })
 );
 
@@ -34,7 +44,10 @@ router.get(
   authMiddleware,
   asyncAuthHandler(async (req: AuthRequest, res) => {
     const result = await authService.getCurrentUser(req.userId!);
-    successResponse(res, result, '获取用户信息成功');
+    if (!result.success) {
+      throw new NotFoundError(result.message);
+    }
+    successResponse(res, result.data, '获取用户信息成功');
   })
 );
 

@@ -50,10 +50,27 @@ export const checkinRepository = {
   },
 
   updateCheckinDiary(checkinId: number, userId: number, mood?: string, notes?: string) {
+    const updates: string[] = [];
+    const params: (string | number | null)[] = [];
+
+    if (mood !== undefined) {
+      updates.push('mood = ?');
+      params.push(mood || null);
+    }
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      params.push(notes || null);
+    }
+
+    if (updates.length === 0) {
+      return false;
+    }
+
+    params.push(checkinId, userId);
     const stmt = db.prepare(
-      'UPDATE checkins SET mood = ?, notes = ? WHERE id = ? AND user_id = ?'
+      `UPDATE checkins SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`
     );
-    const result = stmt.run(mood || null, notes || null, checkinId, userId);
+    const result = stmt.run(...params);
     return result.changes > 0;
   },
 
