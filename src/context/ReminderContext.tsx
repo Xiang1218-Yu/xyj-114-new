@@ -80,7 +80,7 @@ export function ReminderProvider({ children }: { children: ReactNode }) {
 
       try {
         const today = getLocalDateString();
-        const response = await checkin(habit.id, today);
+        const response = await checkin({ habitId: habit.id, date: today });
         if (response.success && response.data) {
           setHabits((prev) =>
             prev.map((h) =>

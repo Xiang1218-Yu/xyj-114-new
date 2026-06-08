@@ -101,7 +101,7 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const response = await checkin(habit.id, today);
+      const response = await checkin({ habitId: habit.id, date: today });
       if (response.success && response.data) {
         await refreshHabits();
 

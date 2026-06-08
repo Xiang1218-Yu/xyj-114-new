@@ -1,20 +1,8 @@
-import { request } from './client';
-import type {
-  LoginRequest,
-  RegisterRequest,
-  AuthResponse,
-  User,
-  ApiResponse,
-} from '@shared/types';
+import { createApiClient } from './client';
+import type { LoginRequest, RegisterRequest, AuthResponse, User } from '@shared/types';
 
-export const login = (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-  return request<AuthResponse>('post', '/auth/login', data);
-};
+const apiClient = createApiClient('/auth');
 
-export const register = (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-  return request<AuthResponse>('post', '/auth/register', data);
-};
-
-export const getCurrentUser = (): Promise<ApiResponse<User>> => {
-  return request<User>('get', '/auth/me');
-};
+export const login = (data: LoginRequest) => apiClient.post<AuthResponse>(data, '/login');
+export const register = (data: RegisterRequest) => apiClient.post<AuthResponse>(data, '/register');
+export const getCurrentUser = () => apiClient.get<User>('/me');

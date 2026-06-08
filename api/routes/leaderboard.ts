@@ -1,25 +1,24 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { leaderboardService } from '../services/leaderboardService.js';
+import { successResponse } from '../utils/response.js';
 
 const router = Router();
 
-router.get('/personal', async (_req, res: Response) => {
-  try {
+router.get(
+  '/personal',
+  asyncHandler(async (_req, res) => {
     const result = await leaderboardService.getPersonalLeaderboard();
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '获取个人排行榜成功');
+  })
+);
 
-router.get('/team', async (_req, res: Response) => {
-  try {
+router.get(
+  '/team',
+  asyncHandler(async (_req, res) => {
     const result = await leaderboardService.getTeamLeaderboard();
-    res.json(result);
-  } catch (error) {
-    console.error('Team leaderboard error:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '获取团队排行榜成功');
+  })
+);
 
 export default router;

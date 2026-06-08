@@ -1,28 +1,10 @@
-import { request } from './client';
-import type {
-  Team,
-  TeamMember,
-  CreateTeamRequest,
-  JoinTeamRequest,
-  ApiResponse,
-} from '@shared/types';
+import { createApiClient } from './client';
+import type { Team, TeamMember, CreateTeamRequest, JoinTeamRequest } from '@shared/types';
 
-export const getTeams = (): Promise<ApiResponse<Team[]>> => {
-  return request<Team[]>('get', '/teams');
-};
+const apiClient = createApiClient('/teams');
 
-export const createTeam = (data: CreateTeamRequest): Promise<ApiResponse<Team>> => {
-  return request<Team>('post', '/teams', data);
-};
-
-export const joinTeam = (data: JoinTeamRequest): Promise<ApiResponse<Team>> => {
-  return request<Team>('post', '/teams/join', data);
-};
-
-export const getTeamDetail = (id: number): Promise<ApiResponse<Team>> => {
-  return request<Team>('get', `/teams/${id}`);
-};
-
-export const getTeamMembers = (id: number): Promise<ApiResponse<TeamMember[]>> => {
-  return request<TeamMember[]>('get', `/teams/${id}/members`);
-};
+export const getTeams = () => apiClient.get<Team[]>();
+export const createTeam = (data: CreateTeamRequest) => apiClient.post<Team>(data);
+export const joinTeam = (data: JoinTeamRequest) => apiClient.post<Team>(data, '/join');
+export const getTeamDetail = (id: number) => apiClient.get<Team>(`/${id}`);
+export const getTeamMembers = (id: number) => apiClient.get<TeamMember[]>(`/${id}/members`);

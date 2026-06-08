@@ -1,48 +1,51 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
+import { asyncAuthHandler } from '../middleware/asyncHandler.js';
 import { habitService } from '../services/habitService.js';
+import { successResponse } from '../utils/response.js';
+import { validate, validateParams, schemas } from '../utils/validation.js';
+import type { CreateHabitRequest } from '../../shared/types.js';
 
 const router = Router();
 
-router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/',
+  authMiddleware,
+  asyncAuthHandler(async (req: AuthRequest, res) => {
     const result = await habitService.getHabits(req.userId!);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '获取习惯列表成功');
+  })
+);
 
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    console.log('Creating habit with data:', JSON.stringify(req.body));
-    const result = await habitService.createHabit(req.userId!, req.body);
-    console.log('Create habit result:', JSON.stringify(result));
-    res.json(result);
-  } catch (error) {
-    console.error('Error creating habit:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+router.post(
+  '/',
+  authMiddleware,
+  asyncAuthHandler(async (req: AuthRequest, res) => {
+    const data = validate<CreateHabitRequest>(req.body, schemas.createHabit);
+    const result = await habitService.createHabit(req.userId!, data);
+    successResponse(res, result, '创建习惯成功', 201);
+  })
+);
 
-router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const habitId = parseInt(req.params.id);
-    const result = await habitService.updateHabit(req.userId!, habitId, req.body);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+router.put(
+  '/:id',
+  authMiddleware,
+  asyncAuthHandler(async (req: AuthRequest, res) => {
+    const [habitId] = validateParams(req.params, ['id']);
+    const data = validate<Partial<CreateHabitRequest>>(req.body, schemas.updateHabit);
+    const result = await habitService.updateHabit(req.userId!, habitId, data);
+    successResponse(res, result, '更新习惯成功');
+  })
+);
 
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const habitId = parseInt(req.params.id);
+router.delete(
+  '/:id',
+  authMiddleware,
+  asyncAuthHandler(async (req: AuthRequest, res) => {
+    const [habitId] = validateParams(req.params, ['id']);
     const result = await habitService.deleteHabit(req.userId!, habitId);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '删除习惯成功');
+  })
+);
 
 export default router;

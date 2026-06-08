@@ -1,14 +1,7 @@
-import { request } from './client';
-import type {
-  LeaderboardEntry,
-  TeamLeaderboardEntry,
-  ApiResponse,
-} from '@shared/types';
+import { createApiClient } from './client';
+import type { LeaderboardEntry, TeamLeaderboardEntry } from '@shared/types';
 
-export const getPersonalLeaderboard = (): Promise<ApiResponse<LeaderboardEntry[]>> => {
-  return request<LeaderboardEntry[]>('get', '/leaderboard/personal');
-};
+const apiClient = createApiClient('/leaderboard');
 
-export const getTeamLeaderboard = (): Promise<ApiResponse<TeamLeaderboardEntry[]>> => {
-  return request<TeamLeaderboardEntry[]>('get', '/leaderboard/team');
-};
+export const getPersonalLeaderboard = () => apiClient.get<LeaderboardEntry[]>('/personal');
+export const getTeamLeaderboard = () => apiClient.get<TeamLeaderboardEntry[]>('/team');

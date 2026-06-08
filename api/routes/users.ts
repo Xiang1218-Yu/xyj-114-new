@@ -1,22 +1,19 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
+import { asyncAuthHandler } from '../middleware/asyncHandler.js';
 import { statsRepository } from '../repositories/statsRepository.js';
-import type { ApiResponse } from '../../shared/types.js';
+import { successResponse } from '../utils/response.js';
 
 const router = Router();
 
-router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/stats',
+  authMiddleware,
+  asyncAuthHandler(async (req: AuthRequest, res) => {
     const userId = req.userId!;
     const stats = statsRepository.getUserStats(userId);
-
-    res.json({
-      success: true,
-      data: stats,
-    } as ApiResponse<typeof stats>);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, stats, '获取用户统计成功');
+  })
+);
 
 export default router;

@@ -1,36 +1,41 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
+import { asyncHandler, asyncAuthHandler } from '../middleware/asyncHandler.js';
 import { authService } from '../services/authService.js';
+import { successResponse } from '../utils/response.js';
+import { validate, schemas } from '../utils/validation.js';
+import type { LoginRequest, RegisterRequest } from '../../shared/types.js';
 
 const router = Router();
 
-router.post('/register', async (req: AuthRequest, res: Response) => {
-  try {
-    const { username, email, password, confirmPassword } = req.body;
+router.post(
+  '/register',
+  asyncHandler(async (req, res) => {
+    const { username, email, password, confirmPassword } = validate<RegisterRequest>(
+      req.body,
+      schemas.register
+    );
     const result = await authService.register(username, email, password, confirmPassword);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '注册成功', 201);
+  })
+);
 
-router.post('/login', async (req: AuthRequest, res: Response) => {
-  try {
-    const { username, password } = req.body;
+router.post(
+  '/login',
+  asyncHandler(async (req, res) => {
+    const { username, password } = validate<LoginRequest>(req.body, schemas.login);
     const result = await authService.login(username, password);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '登录成功');
+  })
+);
 
-router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/me',
+  authMiddleware,
+  asyncAuthHandler(async (req: AuthRequest, res) => {
     const result = await authService.getCurrentUser(req.userId!);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
+    successResponse(res, result, '获取用户信息成功');
+  })
+);
 
 export default router;

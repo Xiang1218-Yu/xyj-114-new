@@ -1,6 +1,6 @@
-import { request } from './client';
-import type { UserStats, ApiResponse } from '@shared/types';
+import { createApiClient } from './client';
+import type { UserStats } from '@shared/types';
 
-export const getUserStats = (): Promise<ApiResponse<UserStats>> => {
-  return request<UserStats>('get', '/users/stats');
-};
+const apiClient = createApiClient('/users');
+
+export const getUserStats = () => apiClient.get<UserStats>('/stats');
